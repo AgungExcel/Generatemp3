@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agung Ai - Voice Generator</title>
+  <title>Agung Ai - Voice & Audio Studio</title>
   
   <!-- Memuat Tailwind CSS untuk tampilan -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -35,7 +35,7 @@
   <script type="text/babel">
     const { useState, useRef, useEffect } = React;
 
-    // --- Komponen Ikon (Menggantikan lucide-react agar bisa jalan di HTML tunggal) ---
+    // --- Komponen Ikon ---
     const Volume2 = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>;
     const Play = ({className, fill}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill || "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>;
     const Download = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>;
@@ -51,6 +51,9 @@
     const ChevronDown = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>;
     const ChevronUp = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>;
     const KeyIcon = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>;
+    const Music = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>;
+    const UploadCloud = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>;
+    const Layers = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>;
 
     // --- Utility Functions for Audio Conversion ---
     function base64ToPCM16(base64) {
@@ -86,6 +89,9 @@
 
     // --- Main Application Component ---
     function App() {
+      const [activeTab, setActiveTab] = useState('tts'); // 'tts' or 'mixer'
+
+      // === STATE UNTUK TTS ===
       const [text, setText] = useState('');
       const [savedTexts, setSavedTexts] = useState([]);
       const [gender, setGender] = useState('Wanita');
@@ -94,16 +100,29 @@
       const [tempo, setTempo] = useState('1');
       const [intonation, setIntonation] = useState('0');
       const [showAdvanced, setShowAdvanced] = useState(false);
-      const [theme, setTheme] = useState('light');
       const [isLoading, setIsLoading] = useState(false);
       const [audioUrl, setAudioUrl] = useState(null);
       const [error, setError] = useState('');
-      
-      // State API Key
-      const [apiKey, setApiKey] = useState(localStorage.getItem('agungai_api_key') || '');
+      const [inputName, setInputName] = useState('Agung');
+
+      // === STATE UNTUK MIXER ===
+      const [mixerFile1, setMixerFile1] = useState(null);
+      const [mixerFile1Name, setMixerFile1Name] = useState('');
+      const [mixerFile2, setMixerFile2] = useState(null);
+      const [mixerFile2Name, setMixerFile2Name] = useState('');
+      const [mixerMode, setMixerMode] = useState('overlay'); // 'overlay' atau 'concat'
+      const [mixerVolume2, setMixerVolume2] = useState(0.2); // Volume untuk file 2 (Backsound)
+      const [mixerIsLoading, setMixerIsLoading] = useState(false);
+      const [mixerResultUrl, setMixerResultUrl] = useState(null);
+      const [mixerError, setMixerError] = useState('');
+
+      // === STATE UMUM ===
+      const [theme, setTheme] = useState('light');
+      const [apiKey, setApiKey] = useState(localStorage.getItem('agungai_api_key') || 'AIzaSyC7a6VLi313bpJ6RJEUSlLQVTQig60V3Oo');
       const [showSettings, setShowSettings] = useState(false);
-      
+
       const audioRef = useRef(null);
+      const mixerAudioRef = useRef(null);
 
       // Load data from Local Storage
       useEffect(() => {
@@ -166,6 +185,7 @@
 
       const currentTheme = themes[theme];
 
+      // === FUNGSI GENERATE TTS ===
       const handleGenerate = async () => {
         if (!text.trim()) {
           setError('Harap masukkan teks terlebih dahulu.');
@@ -182,6 +202,13 @@
           setIsLoading(false);
           return;
         }
+
+        // Ganti variabel dinamis [nama] dan [now]
+        let processedText = text.replace(/\[nama\]/gi, inputName);
+        
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
+        processedText = processedText.replace(/\[now\]/gi, timeString);
 
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey.trim()}`;
 
@@ -204,7 +231,7 @@
         else if (intonation === "2") pitchStr = "with a highly expressive and dramatic tone";
 
         const attributes = [styleStr, tempoStr, pitchStr].filter(Boolean).join(", ");
-        const finalPrompt = `Say ${attributes}:\n\n${text}`;
+        const finalPrompt = `Say ${attributes}:\n\n${processedText}`;
 
         const payload = {
           contents: [{ parts: [{ text: finalPrompt }] }],
@@ -230,7 +257,8 @@
             });
 
             if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
+              const errData = await response.json();
+              throw new Error(errData?.error?.message || `HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
@@ -256,7 +284,7 @@
               await new Promise(resolve => setTimeout(resolve, delay));
               return attemptFetch(retries - 1, delay * 2);
             } else {
-              setError('Gagal menghasilkan suara. Pastikan API Key valid dan koneksi internet stabil.');
+              setError(`Gagal menghasilkan suara: ${err.message}. Pastikan API Key valid dan koneksi internet stabil.`);
               console.error(err);
             }
           }
@@ -266,12 +294,117 @@
         setIsLoading(false);
       };
 
+      // === FUNGSI AUDIO MIXER (GABUNG MP3) ===
+      const loadTtsToMixer = async () => {
+        if (!audioUrl) return;
+        try {
+          const response = await fetch(audioUrl);
+          const blob = await response.blob();
+          setMixerFile1(blob);
+          setMixerFile1Name("Suara_Hasil_TTS.mp3");
+          setMixerError('');
+        } catch (err) {
+          setMixerError("Gagal memuat suara TTS. Coba unggah manual.");
+        }
+      };
+
+      const handleMixerFileChange = (e, setFile, setName) => {
+        const file = e.target.files[0];
+        if (file) {
+          setFile(file);
+          setName(file.name);
+        }
+      };
+
+      const handleMixAudio = async () => {
+        if (!mixerFile1 || !mixerFile2) {
+            setMixerError("Silakan masukkan kedua file audio terlebih dahulu.");
+            return;
+        }
+        
+        setMixerIsLoading(true);
+        setMixerError('');
+        setMixerResultUrl(null);
+
+        try {
+            // Setup Web Audio API Context
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            const tempCtx = new AudioContextClass();
+
+            const getAudioBuffer = async (fileOrBlob) => {
+                const arrayBuffer = await fileOrBlob.arrayBuffer();
+                return await tempCtx.decodeAudioData(arrayBuffer);
+            };
+
+            const buffer1 = await getAudioBuffer(mixerFile1);
+            const buffer2 = await getAudioBuffer(mixerFile2);
+
+            const sampleRate = 44100; // Target sample rate standar
+            let totalDuration = 0;
+
+            if (mixerMode === 'concat') {
+                totalDuration = buffer1.duration + buffer2.duration;
+            } else { // overlay
+                totalDuration = Math.max(buffer1.duration, buffer2.duration);
+            }
+
+            // Gunakan OfflineAudioContext untuk merender secara internal (cepat)
+            const offlineCtx = new OfflineAudioContext(1, Math.ceil(sampleRate * totalDuration), sampleRate);
+
+            // Setup Track 1 (Utama)
+            const source1 = offlineCtx.createBufferSource();
+            source1.buffer = buffer1;
+            const gain1 = offlineCtx.createGain();
+            gain1.gain.value = 1.0;
+            source1.connect(gain1);
+            gain1.connect(offlineCtx.destination);
+
+            // Setup Track 2 (Kedua/Latar)
+            const source2 = offlineCtx.createBufferSource();
+            source2.buffer = buffer2;
+            const gain2 = offlineCtx.createGain();
+            gain2.gain.value = mixerMode === 'overlay' ? parseFloat(mixerVolume2) : 1.0;
+            source2.connect(gain2);
+            gain2.connect(offlineCtx.destination);
+
+            // Penjadwalan Waktu Putar
+            source1.start(0);
+            if (mixerMode === 'concat') {
+                source2.start(buffer1.duration); // Putar setelah track 1 selesai
+            } else {
+                source2.start(0); // Putar bersamaan
+            }
+
+            // Mulai Render
+            const renderedBuffer = await offlineCtx.startRendering();
+
+            // Konversi kembali dari Float32 (AudioBuffer) ke Int16 (PCM)
+            const rawData = renderedBuffer.getChannelData(0); // Ambil channel mono
+            const pcmData = new Int16Array(rawData.length);
+            for (let i = 0; i < rawData.length; i++) {
+                let s = Math.max(-1, Math.min(1, rawData[i]));
+                pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+
+            // Encode ke MP3 menggunakan lamejs
+            const mp3Blob = pcmToMp3(pcmData, sampleRate);
+            const url = URL.createObjectURL(mp3Blob);
+            setMixerResultUrl(url);
+
+        } catch (err) {
+            console.error(err);
+            setMixerError("Gagal menggabungkan audio. Pastikan file tidak rusak dan didukung browser (MP3/WAV/M4A).");
+        }
+        
+        setMixerIsLoading(false);
+      };
+
       return (
         <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center p-4 md:p-8 ${currentTheme.bg}`}>
           
           <div className={`w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden transition-colors duration-300 border ${currentTheme.card} ${currentTheme.border}`}>
             
-            {/* Header */}
+            {/* Header Utama */}
             <div className={`p-6 border-b ${currentTheme.border} flex flex-col sm:flex-row justify-between items-center gap-4`}>
               <div className="flex items-center gap-3">
                 <div className={`p-3 rounded-xl bg-gradient-to-br ${theme === 'neon' ? 'from-emerald-400 to-green-700' : theme === 'sakura' ? 'from-rose-400 to-pink-600' : 'from-blue-500 to-indigo-600'} flex items-center justify-center shadow-lg shadow-black/10`}>
@@ -279,11 +412,11 @@
                 </div>
                 <div>
                   <h1 className={`text-2xl font-extrabold tracking-tight ${currentTheme.text}`}>Agung Ai</h1>
-                  <p className={`text-sm font-medium ${currentTheme.textMuted}`}>Voice Generator</p>
+                  <p className={`text-sm font-medium ${currentTheme.textMuted}`}>Voice & Audio Studio</p>
                 </div>
               </div>
               
-              {/* Theme Selector */}
+              {/* Theme & Settings Control */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowSettings(!showSettings)}
@@ -312,263 +445,331 @@
               </div>
             </div>
 
-            {/* API Key Settings Panel */}
+            {/* Pengaturan API Key Panel */}
             {showSettings && (
               <div className={`p-6 border-b ${currentTheme.border} ${currentTheme.bg} bg-opacity-50 animate-fade-in`}>
-                <label className={`block text-sm font-bold mb-2 ${currentTheme.text}`}>Konfigurasi API Key Gemini</label>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <input 
-                    type="password" 
-                    value={apiKey}
-                    onChange={(e) => {
-                      setApiKey(e.target.value);
-                      localStorage.setItem('agungai_api_key', e.target.value);
-                    }}
-                    placeholder="Masukkan API Key Anda di sini..."
-                    className={`flex-1 p-3 rounded-xl border outline-none transition-all ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border} ${theme === 'neon' ? 'focus:ring-emerald-500' : 'focus:ring-blue-500'} focus:ring-2`}
-                  />
-                  <button 
-                    onClick={() => setShowSettings(false)}
-                    className={`px-6 py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 ${currentTheme.primaryBtn}`}
-                  >
-                    Simpan & Tutup
-                  </button>
+                <label className={`block text-sm font-bold mb-4 ${currentTheme.text}`}>Konfigurasi API Key</label>
+                <div className="space-y-4">
+                  <div>
+                    <label className={`block text-xs font-semibold mb-1 ${currentTheme.textMuted}`}>Gemini API Key (Untuk Voice Generator)</label>
+                    <input 
+                      type="password" 
+                      value={apiKey}
+                      onChange={(e) => {
+                        setApiKey(e.target.value);
+                        localStorage.setItem('agungai_api_key', e.target.value);
+                      }}
+                      placeholder="Masukkan API Key Gemini..."
+                      className={`w-full p-3 rounded-xl border outline-none transition-all ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border} ${theme === 'neon' ? 'focus:ring-emerald-500' : 'focus:ring-blue-500'} focus:ring-2`}
+                    />
+                  </div>
+                  <div className="flex justify-end pt-2">
+                    <button 
+                      onClick={() => setShowSettings(false)}
+                      className={`px-6 py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 ${currentTheme.primaryBtn}`}
+                    >
+                      Simpan & Tutup
+                    </button>
+                  </div>
                 </div>
-                <p className={`text-xs mt-3 ${currentTheme.textMuted}`}>
-                  API Key Anda disimpan secara aman di Local Storage browser perangkat ini dan <strong>tidak</strong> dikirim ke server lain selain Google.
-                </p>
               </div>
             )}
 
-            {/* Body */}
-            <div className="p-6 md:p-8 space-y-6">
-              
-              {/* Text Input */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-end">
-                  <label className={`text-sm font-semibold ${currentTheme.text}`}>
-                    Masukkan Teks
-                  </label>
-                  <button 
-                    onClick={handleSaveTemplate}
-                    className={`text-xs flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all border shadow-sm active:scale-95
-                      ${currentTheme.border} ${currentTheme.text} hover:bg-opacity-10 hover:bg-gray-500`}
-                    title="Simpan teks ini untuk digunakan lagi"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    Simpan Teks
-                  </button>
-                </div>
-                <textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="Ketik atau tempel teks yang ingin diubah menjadi suara di sini..."
-                  className={`w-full h-40 p-4 rounded-xl border focus:ring-2 focus:ring-opacity-50 outline-none resize-none transition-all
-                    ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border}
-                    ${theme === 'neon' ? 'focus:ring-emerald-500 focus:border-emerald-500' : 'focus:ring-blue-500 focus:border-blue-500'}
-                  `}
-                />
+            {/* TAB MENU NAVIGASI */}
+            <div className={`flex border-b ${currentTheme.border}`}>
+              <button 
+                onClick={() => setActiveTab('tts')}
+                className={`flex-1 py-4 flex justify-center items-center gap-2 font-bold text-sm transition-all
+                  ${activeTab === 'tts' ? `border-b-2 ${theme === 'neon' ? 'border-emerald-500 text-emerald-500' : 'border-blue-500 text-blue-500'} ${currentTheme.bg}` : `${currentTheme.textMuted} hover:bg-opacity-5 hover:bg-gray-500`}
+                `}
+              >
+                <Volume2 className="w-4 h-4" />
+                Voice Generator
+              </button>
+              <button 
+                onClick={() => setActiveTab('mixer')}
+                className={`flex-1 py-4 flex justify-center items-center gap-2 font-bold text-sm transition-all
+                  ${activeTab === 'mixer' ? `border-b-2 ${theme === 'neon' ? 'border-emerald-500 text-emerald-500' : 'border-blue-500 text-blue-500'} ${currentTheme.bg}` : `${currentTheme.textMuted} hover:bg-opacity-5 hover:bg-gray-500`}
+                `}
+              >
+                <Layers className="w-4 h-4" />
+                Audio Mixer
+              </button>
+            </div>
 
-                {/* Saved Templates List */}
-                {savedTexts.length > 0 && (
-                  <div className="pt-2 animate-fade-in">
-                    <p className={`text-xs font-semibold mb-2 flex items-center gap-1 ${currentTheme.textMuted}`}>
-                      <Bookmark className="w-3 h-3" /> Teks Tersimpan:
-                    </p>
-                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                      {savedTexts.map((item) => (
-                        <div 
-                          key={item.id} 
-                          className={`flex-shrink-0 flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg border text-sm transition-all shadow-sm
-                            ${currentTheme.border} ${currentTheme.inputBg} ${currentTheme.text} hover:border-blue-500 group
-                          `}
+            {/* KONTEN BERDASARKAN TAB */}
+            <div className="p-6 md:p-8 space-y-6">
+
+              {/* === TAB 1: VOICE GENERATOR (TTS) === */}
+              {activeTab === 'tts' && (
+                <div className="animate-fade-in space-y-6">
+                  {/* Text Input */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-end">
+                      <label className={`text-sm font-semibold ${currentTheme.text}`}>
+                        Masukkan Teks & Variabel
+                      </label>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => setText('Sahur.. Sahur.. Sahur.. mas [nama] sekarang sudah jam [now] jam sekarang. Ayo bangun!')}
+                          className={`text-xs flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all border shadow-sm active:scale-95
+                            ${currentTheme.border} ${currentTheme.text} hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500`}
+                          title="Gunakan template Sahur"
                         >
-                          <span 
-                            onClick={() => setText(item.content)} 
-                            className="truncate max-w-[150px] cursor-pointer" 
-                            title={item.content}
-                          >
-                            {item.preview}
-                          </span>
-                          <button 
-                            onClick={() => handleDeleteTemplate(item.id)}
-                            className={`p-1 rounded-md opacity-50 hover:opacity-100 hover:bg-red-500/10 text-red-500 transition-all`}
-                            title="Hapus"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
+                          <Sparkles className="w-3.5 h-3.5" />
+                          Template Sahur
+                        </button>
+                        <button 
+                          onClick={handleSaveTemplate}
+                          className={`text-xs flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all border shadow-sm active:scale-95
+                            ${currentTheme.border} ${currentTheme.text} hover:bg-opacity-10 hover:bg-gray-500`}
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          Simpan Teks
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Variable Inputs */}
+                    <div className="flex flex-col sm:flex-row gap-3 mb-2">
+                      <div className="flex-1 flex items-center gap-2">
+                        <span className={`text-xs font-semibold ${currentTheme.textMuted}`}>[nama] =</span>
+                        <input 
+                          type="text" 
+                          value={inputName} 
+                          onChange={(e) => setInputName(e.target.value)}
+                          placeholder="Nama panggilan..."
+                          className={`p-1.5 px-3 rounded-md text-sm border outline-none flex-1 transition-all focus:ring-2 ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border} ${theme === 'neon' ? 'focus:ring-emerald-500' : 'focus:ring-blue-500'}`}
+                        />
+                      </div>
+                      <div className="flex-1 flex items-center gap-2">
+                        <span className={`text-xs font-semibold ${currentTheme.textMuted}`}>[now] = Otomatis membaca jam sistem</span>
+                      </div>
+                    </div>
+
+                    <textarea
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      placeholder="Ketik teks di sini. Gunakan [nama] dan [now] agar otomatis diubah oleh sistem..."
+                      className={`w-full h-32 p-4 rounded-xl border focus:ring-2 focus:ring-opacity-50 outline-none resize-none transition-all
+                        ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border}
+                        ${theme === 'neon' ? 'focus:ring-emerald-500 focus:border-emerald-500' : 'focus:ring-blue-500 focus:border-blue-500'}
+                      `}
+                    />
+
+                    {/* Saved Templates List */}
+                    {savedTexts.length > 0 && (
+                      <div className="pt-2">
+                        <p className={`text-xs font-semibold mb-2 flex items-center gap-1 ${currentTheme.textMuted}`}>
+                          <Bookmark className="w-3 h-3" /> Teks Tersimpan:
+                        </p>
+                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                          {savedTexts.map((item) => (
+                            <div key={item.id} className={`flex-shrink-0 flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg border text-sm transition-all shadow-sm ${currentTheme.border} ${currentTheme.inputBg} ${currentTheme.text} hover:border-blue-500 group`}>
+                              <span onClick={() => setText(item.content)} className="truncate max-w-[150px] cursor-pointer">{item.preview}</span>
+                              <button onClick={() => handleDeleteTemplate(item.id)} className={`p-1 rounded-md opacity-50 hover:opacity-100 hover:bg-red-500/10 text-red-500`}><Trash2 className="w-3 h-3" /></button>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Basic Controls (Gender & Voice) */}
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1 space-y-2">
+                      <label className={`text-sm font-semibold ${currentTheme.text}`}>Kategori Gender</label>
+                      <select value={gender} onChange={(e) => handleGenderChange(e.target.value)} className={`w-full p-3 rounded-xl border outline-none cursor-pointer appearance-none transition-all ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border}`}>
+                        <option value="Wanita">Wanita</option>
+                        <option value="Pria">Pria</option>
+                      </select>
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <label className={`text-sm font-semibold ${currentTheme.text}`}>Pilih Karakter Suara</label>
+                      <select value={voice} onChange={(e) => setVoice(e.target.value)} className={`w-full p-3 rounded-xl border outline-none cursor-pointer appearance-none transition-all ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border}`}>
+                        {voicesByGender[gender].map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* Basic Controls (Gender & Voice) */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                {/* Gender Select */}
-                <div className="flex-1 space-y-2">
-                  <label className={`text-sm font-semibold ${currentTheme.text}`}>
-                    Kategori Gender
-                  </label>
-                  <select
-                    value={gender}
-                    onChange={(e) => handleGenderChange(e.target.value)}
-                    className={`w-full p-3 rounded-xl border outline-none cursor-pointer appearance-none transition-all
-                      ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border}
-                    `}
-                  >
-                    <option value="Wanita">Wanita</option>
-                    <option value="Pria">Pria</option>
-                  </select>
+                  {/* Advanced Settings Toggle */}
+                  <button onClick={() => setShowAdvanced(!showAdvanced)} className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${currentTheme.border} ${currentTheme.inputBg} hover:bg-opacity-80`}>
+                    <span className={`text-sm font-bold flex items-center gap-2 ${currentTheme.text}`}>
+                      <Sparkles className={`w-4 h-4 ${theme === 'neon' ? 'text-emerald-500' : 'text-amber-500'}`} /> Pengaturan Suara Lanjutan
+                    </span>
+                    {showAdvanced ? <ChevronUp className={`w-4 h-4 ${currentTheme.textMuted}`} /> : <ChevronDown className={`w-4 h-4 ${currentTheme.textMuted}`} />}
+                  </button>
+
+                  {/* Advanced Settings Content */}
+                  {showAdvanced && (
+                    <div className={`p-5 rounded-xl border ${currentTheme.border} ${currentTheme.bg} bg-opacity-50 space-y-5 animate-fade-in`}>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                          <label className={`text-xs font-semibold ${currentTheme.textMuted}`}>Gaya Penyampaian</label>
+                          <select value={style} onChange={(e) => setStyle(e.target.value)} className={`w-full p-2.5 text-sm rounded-lg border outline-none cursor-pointer transition-all ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border}`}>
+                            <option value="Bebas">Santai / Bebas</option>
+                            <option value="Formal">Formal / Resmi</option>
+                            <option value="MC">Pembawa Acara (MC)</option>
+                            <option value="Berita">Penyiar Berita</option>
+                            <option value="Dongeng">Mendongeng</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <label className={`text-xs font-semibold ${currentTheme.textMuted}`}>Tempo</label>
+                            <span className={`text-xs font-bold ${currentTheme.text}`}>{tempoMap[tempo]}</span>
+                          </div>
+                          <input type="range" min="0.5" max="1.5" step="0.25" value={tempo} onChange={(e) => setTempo(e.target.value)} className={`w-full h-2 rounded-lg appearance-none cursor-pointer bg-slate-300 dark:bg-slate-700 ${theme === 'neon' ? 'accent-emerald-500' : 'accent-blue-600'} mt-2`} />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <label className={`text-xs font-semibold ${currentTheme.textMuted}`}>Intonasi</label>
+                            <span className={`text-xs font-bold ${currentTheme.text}`}>{intonationMap[intonation]}</span>
+                          </div>
+                          <input type="range" min="-2" max="2" step="1" value={intonation} onChange={(e) => setIntonation(e.target.value)} className={`w-full h-2 rounded-lg appearance-none cursor-pointer bg-slate-300 dark:bg-slate-700 ${theme === 'neon' ? 'accent-emerald-500' : 'accent-blue-600'} mt-2`} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Error & Action Button */}
+                  {error && <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm flex items-center gap-2"><span className="font-bold">Error:</span> {error}</div>}
+                  
+                  <button onClick={handleGenerate} disabled={isLoading} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 ${currentTheme.primaryBtn} ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}>
+                    {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> Generating...</> : <><Play className="w-5 h-5" fill="currentColor" /> Generate MP3</>}
+                  </button>
+
+                  {/* Result Player */}
+                  {audioUrl && (
+                    <div className={`mt-8 p-6 rounded-2xl border ${currentTheme.border} ${currentTheme.inputBg} space-y-4 animate-fade-in`}>
+                      <div className="flex justify-between items-center">
+                        <h3 className={`text-sm font-semibold ${currentTheme.text}`}>Hasil Audio TTS:</h3>
+                        <button onClick={() => { setActiveTab('mixer'); loadTtsToMixer(); }} className={`text-xs font-bold flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all border ${currentTheme.border} ${currentTheme.text} hover:bg-opacity-10 hover:bg-gray-500`}>
+                          <Layers className="w-3.5 h-3.5" /> Lanjut ke Mixer
+                        </button>
+                      </div>
+                      <audio ref={audioRef} controls src={audioUrl} className="w-full rounded-lg" autoPlay>Browser tidak mendukung elemen audio.</audio>
+                      <div className="flex justify-end pt-2">
+                        <a href={audioUrl} download={`AgungAi-${voice}-${new Date().getTime()}.mp3`} className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all border ${currentTheme.border} ${currentTheme.text} hover:bg-opacity-10 hover:bg-gray-500`}>
+                          <Download className="w-4 h-4" /> Unduh File (.mp3)
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
+              )}
 
-                {/* Voice Select */}
-                <div className="flex-1 space-y-2">
-                  <label className={`text-sm font-semibold ${currentTheme.text}`}>
-                    Pilih Karakter Suara
-                  </label>
-                  <select
-                    value={voice}
-                    onChange={(e) => setVoice(e.target.value)}
-                    className={`w-full p-3 rounded-xl border outline-none cursor-pointer appearance-none transition-all
-                      ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border}
-                    `}
-                  >
-                    {voicesByGender[gender].map(v => (
-                      <option key={v} value={v}>{v}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              {/* === TAB 2: AUDIO MIXER === */}
+              {activeTab === 'mixer' && (
+                <div className="animate-fade-in space-y-6">
+                  <div className={`p-4 rounded-xl bg-opacity-20 border ${currentTheme.border} ${theme === 'neon' ? 'bg-emerald-900/30' : 'bg-blue-50'}`}>
+                    <p className={`text-sm font-medium flex gap-2 items-center ${currentTheme.text}`}>
+                      <Music className="w-5 h-5" /> Gabungkan suara manusia dengan musik latar, atau sambungkan 2 file MP3 menjadi satu.
+                    </p>
+                  </div>
 
-              {/* Advanced Settings Toggle */}
-              <button
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${currentTheme.border} ${currentTheme.inputBg} hover:bg-opacity-80`}
-              >
-                <span className={`text-sm font-bold flex items-center gap-2 ${currentTheme.text}`}>
-                  <Sparkles className={`w-4 h-4 ${theme === 'neon' ? 'text-emerald-500' : 'text-amber-500'}`} /> 
-                  Pengaturan Suara Lanjutan
-                </span>
-                {showAdvanced ? (
-                  <ChevronUp className={`w-4 h-4 ${currentTheme.textMuted}`} />
-                ) : (
-                  <ChevronDown className={`w-4 h-4 ${currentTheme.textMuted}`} />
-                )}
-              </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Audio 1 Input */}
+                    <div className="space-y-3">
+                      <label className={`text-sm font-bold flex justify-between ${currentTheme.text}`}>
+                        Audio 1 (Suara Utama)
+                      </label>
+                      <div className={`p-4 rounded-xl border-2 border-dashed transition-all ${currentTheme.border} ${currentTheme.inputBg} flex flex-col items-center justify-center gap-3 min-h-[140px] text-center`}>
+                        {mixerFile1Name ? (
+                          <div className="space-y-2">
+                            <Music className={`w-8 h-8 mx-auto ${theme === 'neon' ? 'text-emerald-500' : 'text-blue-500'}`} />
+                            <p className={`text-sm font-semibold break-all ${currentTheme.text}`}>{mixerFile1Name}</p>
+                            <button onClick={() => {setMixerFile1(null); setMixerFile1Name('');}} className="text-xs text-red-500 font-bold hover:underline">Hapus File</button>
+                          </div>
+                        ) : (
+                          <>
+                            <UploadCloud className={`w-8 h-8 ${currentTheme.textMuted}`} />
+                            <div>
+                              <label className={`cursor-pointer text-sm font-bold hover:underline ${theme === 'neon' ? 'text-emerald-500' : 'text-blue-600'}`}>
+                                Klik untuk Unggah MP3
+                                <input type="file" accept="audio/*" className="hidden" onChange={(e) => handleMixerFileChange(e, setMixerFile1, setMixerFile1Name)} />
+                              </label>
+                              <p className={`text-xs mt-1 ${currentTheme.textMuted}`}>Format WAV/MP3</p>
+                            </div>
+                            {audioUrl && (
+                              <button onClick={loadTtsToMixer} className={`mt-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${currentTheme.primaryBtn}`}>
+                                Gunakan Hasil TTS Terakhir
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
 
-              {/* Advanced Settings Content */}
-              {showAdvanced && (
-                <div className={`p-5 rounded-xl border ${currentTheme.border} ${currentTheme.bg} bg-opacity-50 space-y-5 animate-fade-in`}>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    
-                    {/* Gaya Suara */}
+                    {/* Audio 2 Input */}
+                    <div className="space-y-3">
+                      <label className={`text-sm font-bold flex justify-between ${currentTheme.text}`}>
+                        Audio 2 (Musik Latar / Lanjutan)
+                      </label>
+                      <div className={`p-4 rounded-xl border-2 border-dashed transition-all ${currentTheme.border} ${currentTheme.inputBg} flex flex-col items-center justify-center gap-3 min-h-[140px] text-center`}>
+                        {mixerFile2Name ? (
+                          <div className="space-y-2">
+                            <Music className={`w-8 h-8 mx-auto ${theme === 'neon' ? 'text-emerald-500' : 'text-blue-500'}`} />
+                            <p className={`text-sm font-semibold break-all ${currentTheme.text}`}>{mixerFile2Name}</p>
+                            <button onClick={() => {setMixerFile2(null); setMixerFile2Name('');}} className="text-xs text-red-500 font-bold hover:underline">Hapus File</button>
+                          </div>
+                        ) : (
+                          <>
+                            <UploadCloud className={`w-8 h-8 ${currentTheme.textMuted}`} />
+                            <div>
+                              <label className={`cursor-pointer text-sm font-bold hover:underline ${theme === 'neon' ? 'text-emerald-500' : 'text-blue-600'}`}>
+                                Klik untuk Unggah MP3
+                                <input type="file" accept="audio/*" className="hidden" onChange={(e) => handleMixerFileChange(e, setMixerFile2, setMixerFile2Name)} />
+                              </label>
+                              <p className={`text-xs mt-1 ${currentTheme.textMuted}`}>Format WAV/MP3</p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mode Gabungan */}
+                  <div className={`p-5 rounded-xl border ${currentTheme.border} ${currentTheme.bg} bg-opacity-50 space-y-4`}>
                     <div className="space-y-2">
-                      <label className={`text-xs font-semibold ${currentTheme.textMuted}`}>Gaya Penyampaian</label>
-                      <select
-                        value={style}
-                        onChange={(e) => setStyle(e.target.value)}
-                        className={`w-full p-2.5 text-sm rounded-lg border outline-none cursor-pointer transition-all ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border}`}
-                      >
-                        <option value="Bebas">Santai / Bebas</option>
-                        <option value="Formal">Formal / Resmi</option>
-                        <option value="MC">Pembawa Acara (MC)</option>
-                        <option value="Berita">Penyiar Berita</option>
-                        <option value="Dongeng">Mendongeng</option>
+                      <label className={`text-sm font-bold ${currentTheme.text}`}>Mode Penggabungan</label>
+                      <select value={mixerMode} onChange={(e) => setMixerMode(e.target.value)} className={`w-full p-3 rounded-xl border outline-none cursor-pointer transition-all ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border}`}>
+                        <option value="overlay">Bertumpuk (Audio 1 + Audio 2 bersamaan. Cocok untuk Musik Latar)</option>
+                        <option value="concat">Bersambung (Mainkan Audio 1 dulu, lanjut Audio 2)</option>
                       </select>
                     </div>
 
-                    {/* Tempo */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <label className={`text-xs font-semibold ${currentTheme.textMuted}`}>Tempo</label>
-                        <span className={`text-xs font-bold ${currentTheme.text}`}>{tempoMap[tempo]}</span>
+                    {mixerMode === 'overlay' && (
+                      <div className="space-y-2 pt-2 animate-fade-in">
+                        <div className="flex justify-between">
+                          <label className={`text-sm font-bold ${currentTheme.textMuted}`}>Volume Audio 2 (Musik Latar)</label>
+                          <span className={`text-sm font-bold ${currentTheme.text}`}>{Math.round(mixerVolume2 * 100)}%</span>
+                        </div>
+                        <input type="range" min="0.05" max="1" step="0.05" value={mixerVolume2} onChange={(e) => setMixerVolume2(e.target.value)} className={`w-full h-2 rounded-lg appearance-none cursor-pointer bg-slate-300 dark:bg-slate-700 ${theme === 'neon' ? 'accent-emerald-500' : 'accent-blue-600'} mt-2`} />
+                        <p className={`text-xs ${currentTheme.textMuted}`}>Kecilkan volume jika digunakan sebagai musik latar agar tidak menutupi Suara Utama.</p>
                       </div>
-                      <div className="pt-2">
-                        <input 
-                          type="range" min="0.5" max="1.5" step="0.25" 
-                          value={tempo} onChange={(e) => setTempo(e.target.value)}
-                          className={`w-full h-2 rounded-lg appearance-none cursor-pointer bg-slate-300 dark:bg-slate-700 ${theme === 'neon' ? 'accent-emerald-500' : 'accent-blue-600'}`}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Intonasi */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <label className={`text-xs font-semibold ${currentTheme.textMuted}`}>Intonasi</label>
-                        <span className={`text-xs font-bold ${currentTheme.text}`}>{intonationMap[intonation]}</span>
-                      </div>
-                      <div className="pt-2">
-                        <input 
-                          type="range" min="-2" max="2" step="1" 
-                          value={intonation} onChange={(e) => setIntonation(e.target.value)}
-                          className={`w-full h-2 rounded-lg appearance-none cursor-pointer bg-slate-300 dark:bg-slate-700 ${theme === 'neon' ? 'accent-emerald-500' : 'accent-blue-600'}`}
-                        />
-                      </div>
-                    </div>
-
+                    )}
                   </div>
-                </div>
-              )}
 
-              {/* Action Button */}
-              <div className="pt-2">
-                <button
-                  onClick={handleGenerate}
-                  disabled={isLoading}
-                  className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95
-                    ${currentTheme.primaryBtn}
-                    ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}
-                  `}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-5 h-5" fill="currentColor" />
-                      Generate MP3
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Error Message */}
-              {error && (
-                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm flex items-center gap-2">
-                  <span className="font-bold">Error:</span> {error}
-                </div>
-              )}
-
-              {/* Result Player */}
-              {audioUrl && (
-                <div className={`mt-8 p-6 rounded-2xl border ${currentTheme.border} ${currentTheme.inputBg} space-y-4 animate-fade-in`}>
-                  <h3 className={`text-sm font-semibold ${currentTheme.text}`}>Hasil Audio:</h3>
+                  {/* Mixer Error & Action Button */}
+                  {mixerError && <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm flex items-center gap-2"><span className="font-bold">Error:</span> {mixerError}</div>}
                   
-                  <audio 
-                    ref={audioRef}
-                    controls 
-                    src={audioUrl} 
-                    className="w-full rounded-lg"
-                    autoPlay
-                  >
-                    Browser Anda tidak mendukung elemen audio.
-                  </audio>
+                  <button onClick={handleMixAudio} disabled={mixerIsLoading} className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 ${currentTheme.primaryBtn} ${mixerIsLoading ? 'opacity-75 cursor-not-allowed' : ''}`}>
+                    {mixerIsLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> Sedang Menggabungkan Audio...</> : <><Layers className="w-5 h-5" /> Proses & Gabungkan MP3</>}
+                  </button>
 
-                  <div className="flex justify-end pt-2">
-                    <a
-                      href={audioUrl}
-                      download={`AgungAi-${voice}-${new Date().getTime()}.mp3`}
-                      className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all border ${currentTheme.border} ${currentTheme.text} hover:bg-opacity-10 hover:bg-gray-500`}
-                    >
-                      <Download className="w-4 h-4" />
-                      Unduh File (.mp3)
-                    </a>
-                  </div>
+                  {/* Mixer Result Player */}
+                  {mixerResultUrl && (
+                    <div className={`mt-8 p-6 rounded-2xl border ${currentTheme.border} ${currentTheme.inputBg} space-y-4 animate-fade-in`}>
+                      <h3 className={`text-sm font-semibold ${currentTheme.text}`}>Hasil Audio Gabungan:</h3>
+                      <audio ref={mixerAudioRef} controls src={mixerResultUrl} className="w-full rounded-lg" autoPlay>Browser tidak mendukung elemen audio.</audio>
+                      <div className="flex justify-end pt-2">
+                        <a href={mixerResultUrl} download={`AgungAi-Mixed-${new Date().getTime()}.mp3`} className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all border ${currentTheme.border} ${currentTheme.text} hover:bg-opacity-10 hover:bg-gray-500`}>
+                          <Download className="w-4 h-4" /> Unduh File Gabungan (.mp3)
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
