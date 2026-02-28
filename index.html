@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agung Ai - Voice Generator</title>
+  
+  <!-- Memuat Tailwind CSS untuk tampilan -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Memuat pustaka lamejs untuk konversi MP3 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+
+  <!-- Memuat React dan Babel untuk menjalankan JSX di browser -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    /* CSS tambahan untuk animasi dan menyembunyikan scrollbar */
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="antialiased">
+  <!-- Tempat aplikasi React akan dirender -->
+  <div id="root"></div>
+
+  <!-- Script Utama Aplikasi -->
+  <script type="text/babel">
+    const { useState, useRef, useEffect } = React;
+
+    // --- Komponen Ikon (Menggantikan lucide-react agar bisa jalan di HTML tunggal) ---
+    const Volume2 = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>;
+    const Play = ({className, fill}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill={fill || "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>;
+    const Download = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>;
+    const Loader2 = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>;
+    const Palette = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.836-.437-1.124-.298-.333-.469-.766-.469-1.229 0-1.063.858-1.921 1.921-1.921h3.364c2.97 0 5.437-2.467 5.437-5.437C23.464 5.925 18.33 2 12 2z"/></svg>;
+    const Moon = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>;
+    const Sun = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>;
+    const Sparkles = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>;
+    const Save = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>;
+    const Trash2 = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>;
+    const Bookmark = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>;
+    const AudioLines = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>;
+    const ChevronDown = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>;
+    const ChevronUp = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>;
+    const KeyIcon = ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>;
+
+    // --- Utility Functions for Audio Conversion ---
+    function base64ToPCM16(base64) {
+      const binaryString = atob(base64);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return new Int16Array(bytes.buffer);
+    }
+
+    function pcmToMp3(pcmData, sampleRate) {
+      if (!window.lamejs) {
+        throw new Error("Pustaka MP3 Encoder belum dimuat. Pastikan koneksi internet aktif.");
+      }
+      const mp3encoder = new window.lamejs.Mp3Encoder(1, sampleRate, 128);
+      const mp3Data = [];
+      const sampleBlockSize = 1152; 
+      for (let i = 0; i < pcmData.length; i += sampleBlockSize) {
+        const chunk = pcmData.subarray(i, i + sampleBlockSize);
+        const mp3buf = mp3encoder.encodeBuffer(chunk);
+        if (mp3buf.length > 0) {
+          mp3Data.push(mp3buf);
+        }
+      }
+      const mp3buf = mp3encoder.flush();
+      if (mp3buf.length > 0) {
+        mp3Data.push(mp3buf);
+      }
+      return new Blob(mp3Data, { type: 'audio/mp3' });
+    }
+
+    // --- Main Application Component ---
+    function App() {
+      const [text, setText] = useState('');
+      const [savedTexts, setSavedTexts] = useState([]);
+      const [gender, setGender] = useState('Wanita');
+      const [voice, setVoice] = useState('Kore');
+      const [style, setStyle] = useState('Bebas');
+      const [tempo, setTempo] = useState('1');
+      const [intonation, setIntonation] = useState('0');
+      const [showAdvanced, setShowAdvanced] = useState(false);
+      const [theme, setTheme] = useState('light');
+      const [isLoading, setIsLoading] = useState(false);
+      const [audioUrl, setAudioUrl] = useState(null);
+      const [error, setError] = useState('');
+      
+      // State API Key
+      const [apiKey, setApiKey] = useState(localStorage.getItem('agungai_api_key') || '');
+      const [showSettings, setShowSettings] = useState(false);
+      
+      const audioRef = useRef(null);
+
+      // Load data from Local Storage
+      useEffect(() => {
+        const storedText = localStorage.getItem('vocalize_current_text');
+        if (storedText) setText(storedText);
+
+        const storedList = localStorage.getItem('vocalize_saved_texts');
+        if (storedList) setSavedTexts(JSON.parse(storedList));
+      }, []);
+
+      // Save current text to Local Storage
+      useEffect(() => {
+        localStorage.setItem('vocalize_current_text', text);
+      }, [text]);
+
+      useEffect(() => {
+        localStorage.setItem('vocalize_saved_texts', JSON.stringify(savedTexts));
+      }, [savedTexts]);
+
+      const handleSaveTemplate = () => {
+        if (!text.trim()) return;
+        if (savedTexts.some(t => t.content === text)) return;
+
+        const newTemplate = {
+          id: Date.now(),
+          content: text,
+          preview: text.length > 30 ? text.substring(0, 30) + '...' : text
+        };
+        setSavedTexts([newTemplate, ...savedTexts]);
+      };
+
+      const handleDeleteTemplate = (id) => {
+        setSavedTexts(savedTexts.filter(t => t.id !== id));
+      };
+
+      const voicesByGender = {
+        Wanita: ["Kore", "Aoede", "Callirrhoe", "Leda", "Zephyr", "Autonoe", "Despina", "Erinome", "Laomedeia", "Schedar", "Gacrux", "Pulcherrima", "Achird", "Vindemiatrix", "Sulafat"],
+        Pria: ["Puck", "Charon", "Fenrir", "Orus", "Enceladus", "Iapetus", "Umbriel", "Algieba", "Algenib", "Rasalgethi", "Achernar", "Alnilam", "Zubenelgenubi", "Sadachbia", "Sadaltager"]
+      };
+
+      const handleGenderChange = (selectedGender) => {
+        setGender(selectedGender);
+        setVoice(voicesByGender[selectedGender][0]);
+      };
+
+      const tempoMap = {
+        "0.5": "Sangat Lambat", "0.75": "Lambat", "1": "Normal", "1.25": "Cepat", "1.5": "Sangat Cepat"
+      };
+
+      const intonationMap = {
+        "-2": "Sangat Datar", "-1": "Rendah", "0": "Normal", "1": "Tinggi", "2": "Sangat Ekspresif"
+      };
+
+      const themes = {
+        light: { name: 'Terang', bg: 'bg-slate-50', card: 'bg-white', text: 'text-slate-900', textMuted: 'text-slate-500', border: 'border-slate-200', inputBg: 'bg-slate-50', primaryBtn: 'bg-blue-600 hover:bg-blue-700 text-white', icon: <Sun className="w-4 h-4" /> },
+        dark: { name: 'Gelap', bg: 'bg-slate-950', card: 'bg-slate-900', text: 'text-slate-100', textMuted: 'text-slate-400', border: 'border-slate-800', inputBg: 'bg-slate-950', primaryBtn: 'bg-indigo-600 hover:bg-indigo-700 text-white', icon: <Moon className="w-4 h-4" /> },
+        sakura: { name: 'Sakura', bg: 'bg-rose-50', card: 'bg-white/80 backdrop-blur-sm', text: 'text-rose-950', textMuted: 'text-rose-600', border: 'border-rose-200', inputBg: 'bg-white', primaryBtn: 'bg-rose-500 hover:bg-rose-600 text-white', icon: <Palette className="w-4 h-4" /> },
+        neon: { name: 'Neon', bg: 'bg-black', card: 'bg-zinc-900', text: 'text-emerald-400', textMuted: 'text-emerald-600', border: 'border-emerald-800', inputBg: 'bg-black', primaryBtn: 'bg-emerald-600 hover:bg-emerald-500 text-black font-bold', icon: <Sparkles className="w-4 h-4" /> }
+      };
+
+      const currentTheme = themes[theme];
+
+      const handleGenerate = async () => {
+        if (!text.trim()) {
+          setError('Harap masukkan teks terlebih dahulu.');
+          return;
+        }
+
+        setIsLoading(true);
+        setError('');
+        setAudioUrl(null);
+
+        if (!apiKey.trim()) {
+          setError('API Key belum diisi. Silakan klik ikon Kunci di pojok kanan atas untuk memasukkan API Key Gemini Anda.');
+          setShowSettings(true);
+          setIsLoading(false);
+          return;
+        }
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey.trim()}`;
+
+        let styleStr = "in a natural and clear tone";
+        if (style === "MC") styleStr = "like an energetic MC or event host";
+        else if (style === "Formal") styleStr = "in a formal, authoritative, and professional tone";
+        else if (style === "Berita") styleStr = "like a professional news anchor reading the news";
+        else if (style === "Dongeng") styleStr = "like telling an engaging story to children";
+
+        let tempoStr = "";
+        if (tempo === "0.5") tempoStr = "speaking very slowly";
+        else if (tempo === "0.75") tempoStr = "speaking slowly";
+        else if (tempo === "1.25") tempoStr = "speaking quickly";
+        else if (tempo === "1.5") tempoStr = "speaking very quickly";
+
+        let pitchStr = "";
+        if (intonation === "-2") pitchStr = "with a flat, monotone voice";
+        else if (intonation === "-1") pitchStr = "with a low pitch";
+        else if (intonation === "1") pitchStr = "with a high pitch";
+        else if (intonation === "2") pitchStr = "with a highly expressive and dramatic tone";
+
+        const attributes = [styleStr, tempoStr, pitchStr].filter(Boolean).join(", ");
+        const finalPrompt = `Say ${attributes}:\n\n${text}`;
+
+        const payload = {
+          contents: [{ parts: [{ text: finalPrompt }] }],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: {
+                  voiceName: voice
+                }
+              }
+            }
+          },
+          model: "gemini-2.5-flash-preview-tts"
+        };
+
+        const attemptFetch = async (retries = 5, delay = 1000) => {
+          try {
+            const response = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (!data.candidates || !data.candidates[0].content.parts[0].inlineData) {
+              throw new Error("Format respons tidak valid dari API.");
+            }
+
+            const inlineData = data.candidates[0].content.parts[0].inlineData;
+            const mimeType = inlineData.mimeType;
+            const base64Data = inlineData.data;
+
+            const rateMatch = mimeType.match(/rate=(\d+)/);
+            const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+
+            const pcm16Data = base64ToPCM16(base64Data);
+            const mp3Blob = pcmToMp3(pcm16Data, sampleRate);
+            const urlObj = URL.createObjectURL(mp3Blob);
+            
+            setAudioUrl(urlObj);
+          } catch (err) {
+            if (retries > 0) {
+              await new Promise(resolve => setTimeout(resolve, delay));
+              return attemptFetch(retries - 1, delay * 2);
+            } else {
+              setError('Gagal menghasilkan suara. Pastikan API Key valid dan koneksi internet stabil.');
+              console.error(err);
+            }
+          }
+        };
+
+        await attemptFetch();
+        setIsLoading(false);
+      };
+
+      return (
+        <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center p-4 md:p-8 ${currentTheme.bg}`}>
+          
+          <div className={`w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden transition-colors duration-300 border ${currentTheme.card} ${currentTheme.border}`}>
+            
+            {/* Header */}
+            <div className={`p-6 border-b ${currentTheme.border} flex flex-col sm:flex-row justify-between items-center gap-4`}>
+              <div className="flex items-center gap-3">
+                <div className={`p-3 rounded-xl bg-gradient-to-br ${theme === 'neon' ? 'from-emerald-400 to-green-700' : theme === 'sakura' ? 'from-rose-400 to-pink-600' : 'from-blue-500 to-indigo-600'} flex items-center justify-center shadow-lg shadow-black/10`}>
+                  <AudioLines className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className={`text-2xl font-extrabold tracking-tight ${currentTheme.text}`}>Agung Ai</h1>
+                  <p className={`text-sm font-medium ${currentTheme.textMuted}`}>Voice Generator</p>
+                </div>
+              </div>
+              
+              {/* Theme Selector */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowSettings(!showSettings)}
+                  className={`p-2 rounded-xl border transition-all ${currentTheme.border} ${currentTheme.inputBg} hover:bg-opacity-50 ${showSettings ? 'ring-2 ring-blue-500' : ''}`}
+                  title="Pengaturan API Key"
+                >
+                  <KeyIcon className={`w-5 h-5 ${currentTheme.textMuted}`} />
+                </button>
+                <div className={`flex p-1 rounded-xl border ${currentTheme.border} ${currentTheme.inputBg}`}>
+                  {Object.keys(themes).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setTheme(t)}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        theme === t 
+                          ? currentTheme.primaryBtn 
+                          : `hover:bg-opacity-10 hover:bg-gray-500 ${currentTheme.textMuted}`
+                      }`}
+                      title={themes[t].name}
+                    >
+                      {themes[t].icon}
+                      <span className="hidden sm:inline">{themes[t].name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* API Key Settings Panel */}
+            {showSettings && (
+              <div className={`p-6 border-b ${currentTheme.border} ${currentTheme.bg} bg-opacity-50 animate-fade-in`}>
+                <label className={`block text-sm font-bold mb-2 ${currentTheme.text}`}>Konfigurasi API Key Gemini</label>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input 
+                    type="password" 
+                    value={apiKey}
+                    onChange={(e) => {
+                      setApiKey(e.target.value);
+                      localStorage.setItem('agungai_api_key', e.target.value);
+                    }}
+                    placeholder="Masukkan API Key Anda di sini..."
+                    className={`flex-1 p-3 rounded-xl border outline-none transition-all ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border} ${theme === 'neon' ? 'focus:ring-emerald-500' : 'focus:ring-blue-500'} focus:ring-2`}
+                  />
+                  <button 
+                    onClick={() => setShowSettings(false)}
+                    className={`px-6 py-3 rounded-xl font-bold transition-all shadow-md active:scale-95 ${currentTheme.primaryBtn}`}
+                  >
+                    Simpan & Tutup
+                  </button>
+                </div>
+                <p className={`text-xs mt-3 ${currentTheme.textMuted}`}>
+                  API Key Anda disimpan secara aman di Local Storage browser perangkat ini dan <strong>tidak</strong> dikirim ke server lain selain Google.
+                </p>
+              </div>
+            )}
+
+            {/* Body */}
+            <div className="p-6 md:p-8 space-y-6">
+              
+              {/* Text Input */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-end">
+                  <label className={`text-sm font-semibold ${currentTheme.text}`}>
+                    Masukkan Teks
+                  </label>
+                  <button 
+                    onClick={handleSaveTemplate}
+                    className={`text-xs flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all border shadow-sm active:scale-95
+                      ${currentTheme.border} ${currentTheme.text} hover:bg-opacity-10 hover:bg-gray-500`}
+                    title="Simpan teks ini untuk digunakan lagi"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    Simpan Teks
+                  </button>
+                </div>
+                <textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Ketik atau tempel teks yang ingin diubah menjadi suara di sini..."
+                  className={`w-full h-40 p-4 rounded-xl border focus:ring-2 focus:ring-opacity-50 outline-none resize-none transition-all
+                    ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border}
+                    ${theme === 'neon' ? 'focus:ring-emerald-500 focus:border-emerald-500' : 'focus:ring-blue-500 focus:border-blue-500'}
+                  `}
+                />
+
+                {/* Saved Templates List */}
+                {savedTexts.length > 0 && (
+                  <div className="pt-2 animate-fade-in">
+                    <p className={`text-xs font-semibold mb-2 flex items-center gap-1 ${currentTheme.textMuted}`}>
+                      <Bookmark className="w-3 h-3" /> Teks Tersimpan:
+                    </p>
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                      {savedTexts.map((item) => (
+                        <div 
+                          key={item.id} 
+                          className={`flex-shrink-0 flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-lg border text-sm transition-all shadow-sm
+                            ${currentTheme.border} ${currentTheme.inputBg} ${currentTheme.text} hover:border-blue-500 group
+                          `}
+                        >
+                          <span 
+                            onClick={() => setText(item.content)} 
+                            className="truncate max-w-[150px] cursor-pointer" 
+                            title={item.content}
+                          >
+                            {item.preview}
+                          </span>
+                          <button 
+                            onClick={() => handleDeleteTemplate(item.id)}
+                            className={`p-1 rounded-md opacity-50 hover:opacity-100 hover:bg-red-500/10 text-red-500 transition-all`}
+                            title="Hapus"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Basic Controls (Gender & Voice) */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* Gender Select */}
+                <div className="flex-1 space-y-2">
+                  <label className={`text-sm font-semibold ${currentTheme.text}`}>
+                    Kategori Gender
+                  </label>
+                  <select
+                    value={gender}
+                    onChange={(e) => handleGenderChange(e.target.value)}
+                    className={`w-full p-3 rounded-xl border outline-none cursor-pointer appearance-none transition-all
+                      ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border}
+                    `}
+                  >
+                    <option value="Wanita">Wanita</option>
+                    <option value="Pria">Pria</option>
+                  </select>
+                </div>
+
+                {/* Voice Select */}
+                <div className="flex-1 space-y-2">
+                  <label className={`text-sm font-semibold ${currentTheme.text}`}>
+                    Pilih Karakter Suara
+                  </label>
+                  <select
+                    value={voice}
+                    onChange={(e) => setVoice(e.target.value)}
+                    className={`w-full p-3 rounded-xl border outline-none cursor-pointer appearance-none transition-all
+                      ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border}
+                    `}
+                  >
+                    {voicesByGender[gender].map(v => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Advanced Settings Toggle */}
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${currentTheme.border} ${currentTheme.inputBg} hover:bg-opacity-80`}
+              >
+                <span className={`text-sm font-bold flex items-center gap-2 ${currentTheme.text}`}>
+                  <Sparkles className={`w-4 h-4 ${theme === 'neon' ? 'text-emerald-500' : 'text-amber-500'}`} /> 
+                  Pengaturan Suara Lanjutan
+                </span>
+                {showAdvanced ? (
+                  <ChevronUp className={`w-4 h-4 ${currentTheme.textMuted}`} />
+                ) : (
+                  <ChevronDown className={`w-4 h-4 ${currentTheme.textMuted}`} />
+                )}
+              </button>
+
+              {/* Advanced Settings Content */}
+              {showAdvanced && (
+                <div className={`p-5 rounded-xl border ${currentTheme.border} ${currentTheme.bg} bg-opacity-50 space-y-5 animate-fade-in`}>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    
+                    {/* Gaya Suara */}
+                    <div className="space-y-2">
+                      <label className={`text-xs font-semibold ${currentTheme.textMuted}`}>Gaya Penyampaian</label>
+                      <select
+                        value={style}
+                        onChange={(e) => setStyle(e.target.value)}
+                        className={`w-full p-2.5 text-sm rounded-lg border outline-none cursor-pointer transition-all ${currentTheme.inputBg} ${currentTheme.text} ${currentTheme.border}`}
+                      >
+                        <option value="Bebas">Santai / Bebas</option>
+                        <option value="Formal">Formal / Resmi</option>
+                        <option value="MC">Pembawa Acara (MC)</option>
+                        <option value="Berita">Penyiar Berita</option>
+                        <option value="Dongeng">Mendongeng</option>
+                      </select>
+                    </div>
+
+                    {/* Tempo */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <label className={`text-xs font-semibold ${currentTheme.textMuted}`}>Tempo</label>
+                        <span className={`text-xs font-bold ${currentTheme.text}`}>{tempoMap[tempo]}</span>
+                      </div>
+                      <div className="pt-2">
+                        <input 
+                          type="range" min="0.5" max="1.5" step="0.25" 
+                          value={tempo} onChange={(e) => setTempo(e.target.value)}
+                          className={`w-full h-2 rounded-lg appearance-none cursor-pointer bg-slate-300 dark:bg-slate-700 ${theme === 'neon' ? 'accent-emerald-500' : 'accent-blue-600'}`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Intonasi */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <label className={`text-xs font-semibold ${currentTheme.textMuted}`}>Intonasi</label>
+                        <span className={`text-xs font-bold ${currentTheme.text}`}>{intonationMap[intonation]}</span>
+                      </div>
+                      <div className="pt-2">
+                        <input 
+                          type="range" min="-2" max="2" step="1" 
+                          value={intonation} onChange={(e) => setIntonation(e.target.value)}
+                          className={`w-full h-2 rounded-lg appearance-none cursor-pointer bg-slate-300 dark:bg-slate-700 ${theme === 'neon' ? 'accent-emerald-500' : 'accent-blue-600'}`}
+                        />
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+
+              {/* Action Button */}
+              <div className="pt-2">
+                <button
+                  onClick={handleGenerate}
+                  disabled={isLoading}
+                  className={`w-full p-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95
+                    ${currentTheme.primaryBtn}
+                    ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}
+                  `}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-5 h-5" fill="currentColor" />
+                      Generate MP3
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm flex items-center gap-2">
+                  <span className="font-bold">Error:</span> {error}
+                </div>
+              )}
+
+              {/* Result Player */}
+              {audioUrl && (
+                <div className={`mt-8 p-6 rounded-2xl border ${currentTheme.border} ${currentTheme.inputBg} space-y-4 animate-fade-in`}>
+                  <h3 className={`text-sm font-semibold ${currentTheme.text}`}>Hasil Audio:</h3>
+                  
+                  <audio 
+                    ref={audioRef}
+                    controls 
+                    src={audioUrl} 
+                    className="w-full rounded-lg"
+                    autoPlay
+                  >
+                    Browser Anda tidak mendukung elemen audio.
+                  </audio>
+
+                  <div className="flex justify-end pt-2">
+                    <a
+                      href={audioUrl}
+                      download={`AgungAi-${voice}-${new Date().getTime()}.mp3`}
+                      className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all border ${currentTheme.border} ${currentTheme.text} hover:bg-opacity-10 hover:bg-gray-500`}
+                    >
+                      <Download className="w-4 h-4" />
+                      Unduh File (.mp3)
+                    </a>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+          
+        </div>
+      );
+    }
+
+    // --- Inisialisasi React ke dalam DOM ---
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
